@@ -1,0 +1,405 @@
+
+CREATE OR REPLACE FUNCTION "dbo"."EmployeeSalaryDetailDynamicCalculation_VMS"(
+    p_MI_ID BIGINT, 
+    p_HRME_ID BIGINT
+)
+RETURNS TABLE (
+    "mi_id" BIGINT,
+    "emp_id" BIGINT,
+    "hrmed_id" BIGINT,
+    "hrmed_amount" NUMERIC(18,2),
+    "hrmed_ed_type" VARCHAR(50),
+    "hrmed_ed_flag" VARCHAR(50),
+    "hrmed_amount_percent_flag" VARCHAR(50),
+    "hrmed_RoundOffFlag" VARCHAR(50)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_HRMED_IdCUR1 BIGINT;
+    v_TEMPSALCOUNT INT;
+    v_HRMED_IdCUR3 BIGINT;
+    v_HRMEDP_HRMED_IdCUR2 BIGINT;
+    v_HRMEDP_HRMED_IdCUR3 BIGINT;
+    v_CUR3HEADCOUNT INT;
+    v_HRMED_EDTypeFlagCUR1 VARCHAR(50);
+    v_HRMED_EarnDedFlagCUR1 VARCHAR(50);
+    v_HRMED_AmountPercentFlagCUR1 VARCHAR(50);
+    v_HRMED_RoundOffFlagCUR1 VARCHAR(50);
+    v_HREED_PercentageCUR2 VARCHAR(50);
+    v_HREED_PercentageCUR3 VARCHAR(50);
+    v_HRMED_EDTypeFlagCUR3 VARCHAR(50);
+    v_HRMED_EarnDedFlagCUR3 VARCHAR(50);
+    v_HRMED_AmountPercentFlagCUR3 VARCHAR(50);
+    v_HRMED_RoundOffFlagCUR3 VARCHAR(50);
+    v_HRMED_IdCUR4 BIGINT;
+    v_HRMEDP_HRMED_IdCUR4 BIGINT;
+    v_hrmed_amountCUR4 NUMERIC(18,2);
+    v_HREED_PercentageCUR4 VARCHAR(50);
+    v_HRMED_EDTypeFlagCUR4 VARCHAR(50);
+    v_HRMED_EarnDedFlagCUR4 VARCHAR(50);
+    v_HRMED_AmountPercentFlagCUR4 VARCHAR(50);
+    v_HRMED_RoundOffFlagCUR4 VARCHAR(50);
+    v_HREED_AmountCUR1 NUMERIC(18,2);
+    v_CALCULATEDHEADAMOUNT NUMERIC(18,2);
+    v_hrmed_amount NUMERIC(18,2);
+    v_HRC_PFMAXAMT NUMERIC(18,2);
+    v_HRC_FPFPER NUMERIC(18,2);
+    v_HRC_EPFPER NUMERIC(18,2);
+    v_HRC_ACCNO2 NUMERIC(18,2);
+    v_HRC_ACCNO21 NUMERIC(18,2);
+    v_HRC_ACCNO22 NUMERIC(18,2);
+    v_HRC_ESIMAX NUMERIC(18,2);
+    v_HRC_ESIEMPCONT NUMERIC(18,2);
+    v_HRES_COUNT INT;
+    v_HRES_ID BIGINT;
+    v_HRC_ESIMaxAmount NUMERIC(18,2);
+    v_HRC_AC2MinAmount NUMERIC(18,2);
+    v_HRC_AC21MinAmount NUMERIC(18,2);
+    v_HRC_AC22MinAmount NUMERIC(18,2);
+    v_HRC_AsPerEmpFlag BOOLEAN;
+    v_PTAMOUNT NUMERIC(10,2) := 0.00;
+    v_HRME_PFApplicableFlag BOOLEAN;
+    v_HRME_PFDate DATE;
+    v_HRME_PFFixedFlag BOOLEAN;
+    v_HRME_PFMaxFlag BOOLEAN;
+    v_HRME_ESIApplicableFlag BOOLEAN;
+    v_HRME_ESIDate DATE;
+    v_CUR5HRMED_ID BIGINT;
+    v_CUR5HRMED_PERC VARCHAR(50);
+    v_CUR5HRMED_EDTypeFlag VARCHAR(50);
+    v_CUR5HRMED_EarnDedFlag VARCHAR(50);
+    v_CUR5HRMED_AmountPercentFlag VARCHAR(50);
+    v_CUR5HREED_Amount NUMERIC(10,2);
+    v_CUR5HRMED_RoundOffFlag VARCHAR(50);
+    v_CURPTHRMED_Id BIGINT;
+    v_CURPTHRMEDP_HRMED_Id BIGINT;
+    v_SUMAMOUNTPT NUMERIC(18,2);
+    v_CALCAMOUNTPT NUMERIC(18,2);
+    v_CURPFMAXHRMED_Id BIGINT;
+    v_CURPFMAXHRMEDP_HRMED_Id BIGINT;
+    v_SUMAMOUNTPFMAX NUMERIC(18,2);
+    v_CALCAMOUNTPFMAX NUMERIC(18,2);
+    v_CURPFHRMED_Id BIGINT;
+    v_CURPFHRMEDP_HRMED_Id BIGINT;
+    v_SUMAMOUNTPF NUMERIC(18,2);
+    v_CALCAMOUNTPF NUMERIC(18,2);
+    v_CUR6HRMED_Id BIGINT;
+    v_CURHRMEDP_HRMED_Id BIGINT;
+    v_SUMAMOUNT NUMERIC(18,2);
+    v_CALCAMOUNT NUMERIC(18,2);
+    v_CUR7HRMED_Id BIGINT;
+    v_CUR7HRMED_AMOUNT NUMERIC(10,2);
+    v_CUR7HRMED_EDTypeFlag VARCHAR(50);
+    v_CUR7HRMED_EarnDedFlag VARCHAR(50);
+    v_CUR7HRMED_RoundOffFlag VARCHAR(50);
+    v_result NUMERIC(10,2);
+    v_result1 NUMERIC(18,2);
+    v_result2 NUMERIC(18,2);
+    v_result3 NUMERIC(18,2);
+    v_BasicAmount NUMERIC(30,2);
+    rec RECORD;
+BEGIN
+    SELECT "HRC_PFMaxAmt", "HRC_FPFPer", "HRC_EPFPer", "HRC_AsPerEmpFlag",
+           "HRC_AccNo2", "HRC_AccNo21", "HRC_AccNo22", "HRC_ESIMax", "HRC_ESIEmplrCont",
+           "HRC_ESIMaxAmount", "HRC_AC2MinAmount", "HRC_AC21MinAmount", "HRC_AC22MinAmount"
+    INTO v_HRC_PFMAXAMT, v_HRC_FPFPER, v_HRC_EPFPER, v_HRC_AsPerEmpFlag,
+         v_HRC_ACCNO2, v_HRC_ACCNO21, v_HRC_ACCNO22, v_HRC_ESIMAX, v_HRC_ESIEMPCONT,
+         v_HRC_ESIMaxAmount, v_HRC_AC2MinAmount, v_HRC_AC21MinAmount, v_HRC_AC22MinAmount
+    FROM "HR_Configuration"
+    WHERE "MI_Id" = p_MI_ID;
+
+    SELECT "HRME_PFApplicableFlag", "HRME_PFDate", "HRME_PFFixedFlag",
+           "HRME_PFMaxFlag", "HRME_ESIApplicableFlag", "HRME_ESIDate"
+    INTO v_HRME_PFApplicableFlag, v_HRME_PFDate, v_HRME_PFFixedFlag,
+         v_HRME_PFMaxFlag, v_HRME_ESIApplicableFlag, v_HRME_ESIDate
+    FROM "HR_Master_Employee"
+    WHERE "HRME_Id" = p_HRME_ID AND "MI_ID" = p_MI_ID;
+
+    FOR rec IN
+        SELECT A."HRMED_Id", A."HREED_Amount", B."HRMED_EDTypeFlag", B."HRMED_EarnDedFlag", 
+               B."HRMED_AmountPercentFlag", B."HRMED_RoundOffFlag"
+        FROM "HR_Employee_EarningsDeductions" A
+        LEFT JOIN "HR_Master_EarningsDeductions" B ON B."HRMED_Id" = A."HRMED_Id"
+        WHERE A."MI_Id" = p_MI_ID AND A."HRME_Id" = p_HRME_ID 
+          AND B."HRMED_AmountPercentFlag" = 'Amount' 
+          AND B."HRMED_ActiveFlag" = TRUE AND A."HREED_ActiveFlag" = TRUE
+        ORDER BY B."HRMED_EarnDedFlag" DESC, B."HRMED_AmountPercentFlag" ASC
+    LOOP
+        v_HRMED_IdCUR1 := rec."HRMED_Id";
+        v_HREED_AmountCUR1 := rec."HREED_Amount";
+        v_HRMED_EDTypeFlagCUR1 := rec."HRMED_EDTypeFlag";
+        v_HRMED_EarnDedFlagCUR1 := rec."HRMED_EarnDedFlag";
+        v_HRMED_AmountPercentFlagCUR1 := rec."HRMED_AmountPercentFlag";
+        v_HRMED_RoundOffFlagCUR1 := rec."HRMED_RoundOffFlag";
+
+        SELECT COUNT(*) INTO v_TEMPSALCOUNT 
+        FROM "temp_salary_comp_detail_Employee" 
+        WHERE "MI_Id" = p_MI_ID AND "emp_id" = p_HRME_ID AND "hrmed_id" = v_HRMED_IdCUR1;
+
+        IF v_TEMPSALCOUNT = 0 THEN
+            INSERT INTO "temp_salary_comp_detail_Employee" 
+            VALUES(p_MI_ID, p_HRME_ID, v_HRMED_IdCUR1, v_HREED_AmountCUR1, 
+                   v_HRMED_EDTypeFlagCUR1, v_HRMED_EarnDedFlagCUR1, 
+                   v_HRMED_AmountPercentFlagCUR1, v_HRMED_RoundOffFlagCUR1);
+            RAISE NOTICE 'INSERT v_HRMED_IdCUR1 >> %', v_HRMED_IdCUR1;
+        END IF;
+    END LOOP;
+
+    FOR rec IN
+        SELECT A."HRMED_Id"
+        FROM "HR_Master_EarningsDeductions" A
+        LEFT JOIN "HR_Employee_EarningsDeductions" B ON B."HRMED_Id" = A."HRMED_Id"
+        WHERE A."MI_Id" = p_MI_ID AND B."HRME_Id" = p_HRME_ID 
+          AND B."HREED_ActiveFlag" = TRUE AND A."HRMED_ActiveFlag" = TRUE
+          AND A."HRMED_Id" NOT IN (
+              SELECT "hrmed_id" FROM "temp_salary_comp_detail_Employee" 
+              WHERE "mi_id" = p_MI_ID AND "emp_id" = p_HRME_ID
+          )
+          AND A."HRMED_EarnDedFlag" = 'Earning'
+    LOOP
+        v_HRMEDP_HRMED_IdCUR2 := rec."HRMED_Id";
+
+        SELECT COUNT(*) INTO v_TEMPSALCOUNT 
+        FROM "temp_salary_comp_detail_Employee" 
+        WHERE "mi_id" = p_MI_ID AND "emp_id" = p_HRME_ID AND "hrmed_id" = v_HRMEDP_HRMED_IdCUR2;
+
+        IF v_TEMPSALCOUNT = 0 THEN
+            FOR rec IN
+                SELECT A."HRMED_Id", A."HRMEDP_HRMED_Id", B."hrmed_amount", C."HREED_Percentage", 
+                       D."HRMED_EDTypeFlag", D."HRMED_EarnDedFlag", D."HRMED_AmountPercentFlag", 
+                       D."HRMED_RoundOffFlag"
+                FROM "HR_Master_EarningsDeductionsPer" A
+                LEFT JOIN "temp_salary_comp_detail_Employee" B ON B."hrmed_id" = A."HRMEDP_HRMED_Id"
+                LEFT JOIN "HR_Employee_EarningsDeductions" C ON C."HRMED_Id" = A."HRMED_Id"
+                LEFT JOIN "HR_Master_EarningsDeductions" D ON D."HRMED_Id" = C."HRMED_Id"
+                WHERE A."HRMED_Id" = v_HRMEDP_HRMED_IdCUR2 
+                  AND D."HRMED_ActiveFlag" = TRUE AND C."HREED_ActiveFlag" = TRUE 
+                  AND A."MI_Id" = p_MI_ID AND C."HRME_Id" = p_HRME_ID
+                  AND A."HRMEDP_HRMED_Id" IN (
+                      SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                      WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                  )
+            LOOP
+                v_HRMED_IdCUR3 := rec."HRMED_Id";
+                v_HRMEDP_HRMED_IdCUR3 := rec."HRMEDP_HRMED_Id";
+                v_hrmed_amount := rec."hrmed_amount";
+                v_HREED_PercentageCUR3 := rec."HREED_Percentage";
+                v_HRMED_EDTypeFlagCUR3 := rec."HRMED_EDTypeFlag";
+                v_HRMED_EarnDedFlagCUR3 := rec."HRMED_EarnDedFlag";
+                v_HRMED_AmountPercentFlagCUR3 := rec."HRMED_AmountPercentFlag";
+                v_HRMED_RoundOffFlagCUR3 := rec."HRMED_RoundOffFlag";
+
+                SELECT COUNT(*) INTO v_CUR3HEADCOUNT 
+                FROM "temp_salary_comp_detail_Employee" 
+                WHERE "HRMED_Id" = v_HRMEDP_HRMED_IdCUR3;
+
+                IF v_CUR3HEADCOUNT = 0 THEN
+                    FOR rec IN
+                        SELECT A."HRMED_Id", A."HRMEDP_HRMED_Id", B."hrmed_amount", C."HREED_Percentage", 
+                               D."HRMED_EDTypeFlag", D."HRMED_EarnDedFlag", D."HRMED_AmountPercentFlag", 
+                               D."HRMED_RoundOffFlag"
+                        FROM "HR_Master_EarningsDeductionsPer" A
+                        LEFT JOIN "temp_salary_comp_detail_Employee" B ON B."hrmed_id" = A."HRMEDP_HRMED_Id"
+                        LEFT JOIN "HR_Employee_EarningsDeductions" C ON C."HRMED_Id" = A."HRMED_Id"
+                        LEFT JOIN "HR_Master_EarningsDeductions" D ON D."HRMED_Id" = C."HRMED_Id"
+                        WHERE A."HRMED_Id" = v_HRMEDP_HRMED_IdCUR3 
+                          AND D."HRMED_ActiveFlag" = TRUE AND C."HREED_ActiveFlag" = TRUE 
+                          AND A."MI_Id" = p_MI_ID AND C."HRME_Id" = p_HRME_ID
+                          AND A."HRMEDP_HRMED_Id" IN (
+                              SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                              WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                          )
+                    LOOP
+                        v_HRMED_IdCUR4 := rec."HRMED_Id";
+                        v_HRMEDP_HRMED_IdCUR4 := rec."HRMEDP_HRMED_Id";
+                        v_hrmed_amountCUR4 := rec."hrmed_amount";
+                        v_HREED_PercentageCUR4 := rec."HREED_Percentage";
+                        v_HRMED_EDTypeFlagCUR4 := rec."HRMED_EDTypeFlag";
+                        v_HRMED_EarnDedFlagCUR4 := rec."HRMED_EarnDedFlag";
+                        v_HRMED_AmountPercentFlagCUR4 := rec."HRMED_AmountPercentFlag";
+                        v_HRMED_RoundOffFlagCUR4 := rec."HRMED_RoundOffFlag";
+
+                        SELECT ("hrmed_amount"::NUMERIC * v_HREED_PercentageCUR4::NUMERIC) / 100 
+                        INTO v_CALCULATEDHEADAMOUNT
+                        FROM "temp_salary_comp_detail_Employee" 
+                        WHERE "HRMED_Id" = v_HRMEDP_HRMED_IdCUR4;
+
+                        v_result3 := "CalculateRoundOffValue"(v_CALCULATEDHEADAMOUNT, v_HRMED_RoundOffFlagCUR4);
+                        v_CALCULATEDHEADAMOUNT := v_result3::NUMERIC(18,2);
+
+                        INSERT INTO "temp_salary_comp_detail_Employee" 
+                        VALUES(p_MI_ID, p_HRME_ID, v_HRMED_IdCUR4, v_CALCULATEDHEADAMOUNT, 
+                               v_HRMED_EDTypeFlagCUR4, v_HRMED_EarnDedFlagCUR4, 
+                               v_HRMED_AmountPercentFlagCUR4, v_HRMED_RoundOffFlagCUR4);
+                        RAISE NOTICE 'INSERT v_HRMED_IdCUR4 >> %', v_HRMED_IdCUR4;
+
+                        v_result1 := "CalculateRoundOffValue"(v_CALCULATEDHEADAMOUNT, v_HRMED_RoundOffFlagCUR3);
+                        v_CALCULATEDHEADAMOUNT := v_result1::NUMERIC(18,2);
+
+                        SELECT (v_CALCULATEDHEADAMOUNT * v_HREED_PercentageCUR3::NUMERIC) / 100 
+                        INTO v_CALCULATEDHEADAMOUNT
+                        FROM "temp_salary_comp_detail_Employee" 
+                        WHERE "HRMED_Id" = v_HRMEDP_HRMED_IdCUR3;
+
+                        INSERT INTO "temp_salary_comp_detail_Employee" 
+                        VALUES(p_MI_ID, p_HRME_ID, v_HRMED_IdCUR3, v_CALCULATEDHEADAMOUNT, 
+                               v_HRMED_EDTypeFlagCUR3, v_HRMED_EarnDedFlagCUR3, 
+                               v_HRMED_AmountPercentFlagCUR3, v_HRMED_RoundOffFlagCUR3);
+                        RAISE NOTICE 'INSERT v_HRMED_IdCUR3 >>>> %', v_HRMED_IdCUR3;
+                    END LOOP;
+                ELSE
+                    SELECT ("hrmed_amount"::NUMERIC * v_HREED_PercentageCUR3::NUMERIC) / 100 
+                    INTO v_CALCULATEDHEADAMOUNT
+                    FROM "temp_salary_comp_detail_Employee" 
+                    WHERE "HRMED_Id" = v_HRMEDP_HRMED_IdCUR3;
+
+                    v_result2 := "CalculateRoundOffValue"(v_CALCULATEDHEADAMOUNT, v_HRMED_RoundOffFlagCUR3);
+                    v_CALCULATEDHEADAMOUNT := v_result2::NUMERIC(18,2);
+
+                    INSERT INTO "temp_salary_comp_detail_Employee" 
+                    VALUES(p_MI_ID, p_HRME_ID, v_HRMED_IdCUR3, v_CALCULATEDHEADAMOUNT, 
+                           v_HRMED_EDTypeFlagCUR3, v_HRMED_EarnDedFlagCUR3, 
+                           v_HRMED_AmountPercentFlagCUR3, v_HRMED_RoundOffFlagCUR3);
+                    RAISE NOTICE 'INSERT v_HRMED_IdCUR3 >> %', v_HRMED_IdCUR3;
+                END IF;
+            END LOOP;
+        END IF;
+    END LOOP;
+
+    FOR rec IN
+        SELECT A."HRMED_Id", A."HREED_Percentage", B."HRMED_EDTypeFlag", B."HRMED_EarnDedFlag", 
+               B."HRMED_AmountPercentFlag", A."HREED_Amount", B."HRMED_RoundOffFlag"
+        FROM "HR_Employee_EarningsDeductions" A
+        LEFT JOIN "HR_Master_EarningsDeductions" B ON B."HRMED_Id" = A."HRMED_Id"
+        WHERE B."HRMED_EarnDedFlag" = 'Deduction' 
+          AND B."HRMED_AmountPercentFlag" = 'Percentage' 
+          AND B."HRMED_ActiveFlag" = TRUE AND A."HREED_ActiveFlag" = TRUE 
+          AND A."MI_Id" = p_MI_ID AND A."HRME_Id" = p_HRME_ID
+    LOOP
+        v_CUR5HRMED_ID := rec."HRMED_Id";
+        v_CUR5HRMED_PERC := rec."HREED_Percentage";
+        v_CUR5HRMED_EDTypeFlag := rec."HRMED_EDTypeFlag";
+        v_CUR5HRMED_EarnDedFlag := rec."HRMED_EarnDedFlag";
+        v_CUR5HRMED_AmountPercentFlag := rec."HRMED_AmountPercentFlag";
+        v_CUR5HREED_Amount := rec."HREED_Amount";
+        v_CUR5HRMED_RoundOffFlag := rec."HRMED_RoundOffFlag";
+
+        IF v_CUR5HRMED_EDTypeFlag = 'PT' THEN
+            FOR rec IN
+                SELECT "HRMED_Id", "HRMEDP_HRMED_Id"
+                FROM "HR_Master_EarningsDeductionsPer"
+                WHERE "HRMED_Id" = v_CUR5HRMED_ID
+                  AND "HRMEDP_HRMED_Id" IN (
+                      SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                      WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                  )
+            LOOP
+                v_CURPTHRMED_Id := rec."HRMED_Id";
+                v_CURPTHRMEDP_HRMED_Id := rec."HRMEDP_HRMED_Id";
+
+                SELECT SUM("hrmed_amount") INTO v_SUMAMOUNTPT
+                FROM "temp_salary_comp_detail_Employee" 
+                WHERE "hrmed_id" = v_CURPTHRMEDP_HRMED_Id;
+
+                v_CALCAMOUNTPT := v_SUMAMOUNTPT;
+                INSERT INTO "temp_salary_comp_detail_Employee" 
+                VALUES(p_MI_ID, p_HRME_ID, v_CUR5HRMED_ID, v_CALCAMOUNTPT, 
+                       v_CUR5HRMED_EDTypeFlag, v_CUR5HRMED_EarnDedFlag, 
+                       v_CUR5HRMED_AmountPercentFlag, v_CUR5HRMED_RoundOffFlag);
+                RAISE NOTICE 'INSERT v_CUR5HRMED_ID PT->> %', v_CUR5HRMED_ID;
+            END LOOP;
+
+        ELSIF v_CUR5HRMED_EDTypeFlag = 'PF' THEN
+            IF v_HRME_PFApplicableFlag = TRUE THEN
+                IF v_HRC_AsPerEmpFlag = TRUE THEN
+                    IF v_HRME_PFFixedFlag = TRUE THEN
+                        INSERT INTO "temp_salary_comp_detail_Employee" 
+                        VALUES(p_MI_ID, p_HRME_ID, v_CUR5HRMED_ID, v_CUR5HREED_Amount, 
+                               v_CUR5HRMED_EDTypeFlag, v_CUR5HRMED_EarnDedFlag, 
+                               v_CUR5HRMED_AmountPercentFlag, v_CUR5HRMED_RoundOffFlag);
+                        RAISE NOTICE 'INSERT v_CUR5HRMED_ID PF PFFixed->> %', v_CUR5HRMED_ID;
+                    ELSE
+                        FOR rec IN
+                            SELECT "HRMED_Id", "HRMEDP_HRMED_Id"
+                            FROM "HR_Master_EarningsDeductionsPer"
+                            WHERE "HRMED_Id" = v_CUR5HRMED_ID
+                              AND "HRMEDP_HRMED_Id" IN (
+                                  SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                                  WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                              )
+                        LOOP
+                            v_CURPFMAXHRMED_Id := rec."HRMED_Id";
+                            v_CURPFMAXHRMEDP_HRMED_Id := rec."HRMEDP_HRMED_Id";
+
+                            SELECT SUM("hrmed_amount") INTO v_SUMAMOUNTPFMAX
+                            FROM "temp_salary_comp_detail_Employee" 
+                            WHERE "hrmed_id" = v_CURPFMAXHRMEDP_HRMED_Id;
+
+                            v_CALCAMOUNTPFMAX := (v_SUMAMOUNTPFMAX * v_CUR5HRMED_PERC::NUMERIC) / 100;
+                            INSERT INTO "temp_salary_comp_detail_Employee" 
+                            VALUES(p_MI_ID, p_HRME_ID, v_CUR5HRMED_ID, v_CALCAMOUNTPFMAX, 
+                                   v_CUR5HRMED_EDTypeFlag, v_CUR5HRMED_EarnDedFlag, 
+                                   v_CUR5HRMED_AmountPercentFlag, v_CUR5HRMED_RoundOffFlag);
+                            RAISE NOTICE 'INSERT v_CUR5HRMED_ID PF MAX or General PF->> %', v_CUR5HRMED_ID;
+                        END LOOP;
+                    END IF;
+                ELSE
+                    FOR rec IN
+                        SELECT "HRMED_Id", "HRMEDP_HRMED_Id"
+                        FROM "HR_Master_EarningsDeductionsPer"
+                        WHERE "HRMED_Id" = v_CUR5HRMED_ID
+                          AND "HRMEDP_HRMED_Id" IN (
+                              SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                              WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                          )
+                    LOOP
+                        v_CURPFHRMED_Id := rec."HRMED_Id";
+                        v_CURPFHRMEDP_HRMED_Id := rec."HRMEDP_HRMED_Id";
+
+                        SELECT SUM("hrmed_amount") INTO v_SUMAMOUNTPF
+                        FROM "temp_salary_comp_detail_Employee" 
+                        WHERE "hrmed_id" = v_CURPFHRMEDP_HRMED_Id;
+
+                        v_CALCAMOUNTPF := (v_SUMAMOUNTPF * v_CUR5HRMED_PERC::NUMERIC) / 100;
+                        INSERT INTO "temp_salary_comp_detail_Employee" 
+                        VALUES(p_MI_ID, p_HRME_ID, v_CUR5HRMED_ID, v_CALCAMOUNTPF, 
+                               v_CUR5HRMED_EDTypeFlag, v_CUR5HRMED_EarnDedFlag, 
+                               v_CUR5HRMED_AmountPercentFlag, v_CUR5HRMED_RoundOffFlag);
+                        RAISE NOTICE 'INSERT v_CUR5HRMED_ID PF->> %', v_CUR5HRMED_ID;
+                    END LOOP;
+                END IF;
+            END IF;
+        ELSE
+            FOR rec IN
+                SELECT "HRMED_Id", "HRMEDP_HRMED_Id"
+                FROM "HR_Master_EarningsDeductionsPer"
+                WHERE "HRMED_Id" = v_CUR5HRMED_ID
+                  AND "HRMEDP_HRMED_Id" IN (
+                      SELECT "HRMED_Id" FROM "HR_Employee_EarningsDeductions" 
+                      WHERE "HRME_Id" = p_HRME_ID AND "MI_Id" = p_MI_Id AND "HREED_ActiveFlag" = TRUE
+                  )
+            LOOP
+                v_CUR6HRMED_Id := rec."HRMED_Id";
+                v_CURHRMEDP_HRMED_Id := rec."HRMEDP_HRMED_Id";
+
+                SELECT SUM("hrmed_amount") INTO v_SUMAMOUNT
+                FROM "temp_salary_comp_detail_Employee" 
+                WHERE "hrmed_id" = v_CURHRMEDP_HRMED_Id;
+
+                v_CALCAMOUNT := (v_SUMAMOUNT * v_CUR5HRMED_PERC::NUMERIC) / 100;
+                INSERT INTO "temp_salary_comp_detail_Employee" 
+                VALUES(p_MI_ID, p_HRME_ID, v_CUR5HRMED_ID, v_CALCAMOUNT, 
+                       v_CUR5HRMED_EDTypeFlag, v_CUR5HRMED_EarnDedFlag, 
+                       v_CUR5HRMED_AmountPercentFlag, v_CUR5HRMED_RoundOffFlag);
+                RAISE NOTICE 'INSERT v_CUR5HRMED_ID ->> %', v_CUR5HRMED_ID;
+            END LOOP;
+        END IF;
+    END LOOP;
+
+    FOR rec IN
+        SELECT "hrmed_id", SUM("hrmed_amount") AS AMT, "hrmed_ed_type", 
+               "hrmed_ed_flag", "hrmed_RoundOffFlag"
+        FROM "temp_salary_comp_detail_Employee"
+        GROUP BY "hrmed_id", "hrmed_ed_type", "hrmed_ed_flag", "hrmed_RoundOffFlag"
+    

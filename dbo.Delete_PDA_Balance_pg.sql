@@ -1,0 +1,12 @@
+CREATE OR REPLACE FUNCTION "dbo"."Delete_PDA_Balance" (
+    "@PDAS_Id" TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    DELETE FROM "PDA_Status" WHERE "PDAS_Id" = "@PDAS_Id";
+
+END;
+$$;

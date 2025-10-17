@@ -1,0 +1,90 @@
+CREATE OR REPLACE FUNCTION "dbo"."fee_report_details_1"(
+    "asmay_id" VARCHAR(10),
+    "asmcl_id" VARCHAR(10),
+    "asms_id" VARCHAR(10),
+    "fmh_id" VARCHAR(10),
+    "fmt_ids" TEXT,
+    "type" VARCHAR(10),
+    "trmr_id" VARCHAR(10),
+    "mi_id" VARCHAR(10),
+    "userid" VARCHAR(10),
+    "active" VARCHAR(50),
+    "deactive" VARCHAR(50),
+    "left" VARCHAR(50),
+    "report" VARCHAR(50),
+    "details" VARCHAR(50)
+)
+RETURNS TABLE(
+    "StudentName" TEXT,
+    "ASMCL_ClassName" TEXT,
+    "FSS_OBArrearAmount" NUMERIC,
+    "FSS_OBExcessAmount" NUMERIC,
+    "FSS_WaivedAmount" NUMERIC,
+    "FSS_AdjustedAmount" NUMERIC,
+    "FSS_RefundAmount" NUMERIC,
+    "TRMR_RouteName" TEXT,
+    "FMH_FeeName" TEXT,
+    "FSS_TotalToBePaid" NUMERIC,
+    "FSS_ToBePaid" NUMERIC,
+    "FSS_PaidAmount" NUMERIC,
+    "FMOB_Student_Due" NUMERIC,
+    "FMOB_Institution_Due" NUMERIC,
+    "FSWO_Date" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    "query" TEXT;
+    "amst_sol" TEXT;
+    "sql1" TEXT;
+    "sql2" TEXT;
+BEGIN
+    IF "fmh_id" = '0' THEN
+        "sql1" := ' ';
+    ELSE
+        "sql1" := 'and "dbo"."Fee_Master_Head"."fmh_id"=' || "fmh_id" || '';
+    END IF;
+
+    IF "asmcl_id" = '0' THEN
+        "sql2" := ' ';
+    ELSE
+        IF "asms_id" = '0' THEN
+            "sql2" := 'AND ("dbo"."Adm_School_Y_Student"."ASMCL_Id" = ' || "asmcl_id" || ')';
+        ELSE
+            "sql2" := 'AND ("dbo"."Adm_School_Y_Student"."ASMCL_Id" = ' || "asmcl_id" || ')AND ("dbo"."Adm_School_Y_Student"."ASMS_Id" = ' || "asms_id" || ') ';
+        END IF;
+    END IF;
+
+    IF "active" = '1' AND "deactive" = '0' AND "left" = '0' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag"=1)and ("Adm_M_Student"."AMST_SOL"=''S'') and ("Adm_M_Student"."AMST_ActiveFlag"=1)';
+    ELSIF "deactive" = '1' AND "active" = '0' AND "left" = '0' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag"=1)and ("Adm_M_Student"."AMST_SOL"=''D'') and ("Adm_M_Student"."AMST_ActiveFlag"=1)';
+    ELSIF "left" = '1' AND "active" = '0' AND "deactive" = '0' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag"=0)and ("Adm_M_Student"."AMST_SOL"=''L'') and ("Adm_M_Student"."AMST_ActiveFlag"=0)';
+    ELSIF "left" = '1' AND "active" = '1' AND "deactive" = '0' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag" in (0,1))and ("Adm_M_Student"."AMST_SOL" in (''L'',''S'')) and ("Adm_M_Student"."AMST_ActiveFlag" in(0,1))';
+    ELSIF "left" = '1' AND "active" = '0' AND "deactive" = '1' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag" in (0,1))and ("Adm_M_Student"."AMST_SOL" in (''L'',''D'')) and ("Adm_M_Student"."AMST_ActiveFlag" in(0,1))';
+    ELSIF "left" = '0' AND "active" = '1' AND "deactive" = '1' THEN
+        "amst_sol" := 'and ("Adm_School_Y_Student"."AMAY_ActiveFlag" in (1))and ("Adm_M_Student"."AMST_SOL" in (''S'',''D'')) and ("Adm_M_Student"."AMST_ActiveFlag" in(1))';
+    ELSE
+        "amst_sol" := ' ';
+    END IF;
+
+    IF "report" = 'all' THEN
+        IF "trmr_id" = '0' THEN
+            IF "type" = 'FSW' THEN
+                "query" := 'SELECT distinct (COALESCE("dbo"."Adm_M_Student"."AMST_FirstName",'''') || '' '' || COALESCE("dbo"."Adm_M_Student"."AMST_MiddleName",'''') || '' '' || COALESCE("dbo"."Adm_M_Student"."AMST_LastName",''''))::TEXT AS "StudentName", ("dbo"."Adm_School_M_Class"."ASMCL_ClassName" || '':'' || "dbo"."Adm_School_M_Section"."ASMC_SectionName")::TEXT AS "ASMCL_ClassName", sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount") AS "FSS_OBArrearAmount", sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") AS "FSS_OBExcessAmount", sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") AS "FSS_WaivedAmount", sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount") AS "FSS_AdjustedAmount", sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") AS "FSS_RefundAmount", NULL::TEXT AS "TRMR_RouteName", NULL::TEXT AS "FMH_FeeName", NULL::NUMERIC AS "FSS_TotalToBePaid", NULL::NUMERIC AS "FSS_ToBePaid", NULL::NUMERIC AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Master_Head" INNER JOIN "dbo"."Fee_Master_Terms_FeeHeads" ON "dbo"."Fee_Master_Head"."FMH_Id" = "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" INNER JOIN "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" ON "dbo"."Fee_Student_Status"."AMST_Id" = "dbo"."Adm_M_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" ON "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" = "dbo"."Fee_Student_Status"."FMH_Id" AND "dbo"."Fee_Master_Terms_FeeHeads"."FTI_Id" = "dbo"."Fee_Student_Status"."FTI_Id" WHERE ("dbo"."Adm_School_Y_Student"."ASMAY_Id" = ' || "asmay_id" || ') and ("dbo"."Fee_Student_Status"."MI_Id"=' || "mi_id" || ') ' || "sql2" || ' AND ("dbo"."Fee_Student_Status"."User_Id" = ' || "userid" || ') ' || "sql1" || ' AND ("dbo"."Fee_Master_Terms_FeeHeads"."FMT_Id" IN (' || "fmt_ids" || ')) ' || "amst_sol" || ' and "FMH_Flag" not in (''E'',''F'') and ("dbo"."Fee_Student_Status"."ASMAY_Id" = ' || "asmay_id" || ') group by "ASMCL_ClassName","ASMC_SectionName","AMST_FirstName","AMST_MiddleName","AMST_LastName" having sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") >0';
+            ELSIF "type" = 'FRW' THEN
+                "query" := 'SELECT distinct NULL::TEXT AS "StudentName", NULL::TEXT AS "ASMCL_ClassName", sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount") AS "FSS_OBArrearAmount", sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") AS "FSS_OBExcessAmount", sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") AS "FSS_WaivedAmount", sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount") AS "FSS_AdjustedAmount", sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") AS "FSS_RefundAmount", "TRMR_RouteName"::TEXT, NULL::TEXT AS "FMH_FeeName", NULL::NUMERIC AS "FSS_TotalToBePaid", NULL::NUMERIC AS "FSS_ToBePaid", NULL::NUMERIC AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Master_Head" INNER JOIN "dbo"."Fee_Master_Terms_FeeHeads" ON "dbo"."Fee_Master_Head"."FMH_Id" = "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" INNER JOIN "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" ON "dbo"."Fee_Student_Status"."AMST_Id" = "dbo"."Adm_M_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" ON "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" = "dbo"."Fee_Student_Status"."FMH_Id" AND "dbo"."Fee_Master_Terms_FeeHeads"."FTI_Id" = "dbo"."Fee_Student_Status"."FTI_Id" inner join "trn"."TR_Student_Route" on "trn"."TR_Student_Route"."AMST_Id"="dbo"."Fee_Student_Status"."AMST_Id" inner join "trn"."TR_Master_Route" on "trn"."TR_Master_Route"."TRMR_Id"="trn"."TR_Student_Route"."TRMR_Id" WHERE ("dbo"."Adm_School_Y_Student"."ASMAY_Id" = ' || "asmay_id" || ') and ("dbo"."Fee_Student_Status"."MI_Id"=' || "mi_id" || ') ' || "sql2" || ' AND ("dbo"."Fee_Student_Status"."User_Id" = ' || "userid" || ') ' || "sql1" || ' AND ("dbo"."Fee_Master_Terms_FeeHeads"."FMT_Id" IN (' || "fmt_ids" || ')) ' || "amst_sol" || ' and "FMH_Flag" not in (''E'',''F'') group by "TRMR_RouteName" having sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") >0';
+            ELSIF "type" = 'FHW' THEN
+                "query" := 'SELECT distinct NULL::TEXT AS "StudentName", NULL::TEXT AS "ASMCL_ClassName", sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount") AS "FSS_OBArrearAmount", sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") AS "FSS_OBExcessAmount", sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") AS "FSS_WaivedAmount", sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount") AS "FSS_AdjustedAmount", sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") AS "FSS_RefundAmount", NULL::TEXT AS "TRMR_RouteName", "dbo"."Fee_Master_Head"."FMH_FeeName"::TEXT, NULL::NUMERIC AS "FSS_TotalToBePaid", NULL::NUMERIC AS "FSS_ToBePaid", NULL::NUMERIC AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Master_Head" INNER JOIN "dbo"."Fee_Master_Terms_FeeHeads" ON "dbo"."Fee_Master_Head"."FMH_Id" = "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" INNER JOIN "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" ON "dbo"."Fee_Student_Status"."AMST_Id" = "dbo"."Adm_M_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" ON "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" = "dbo"."Fee_Student_Status"."FMH_Id" AND "dbo"."Fee_Master_Terms_FeeHeads"."FTI_Id" = "dbo"."Fee_Student_Status"."FTI_Id" WHERE ("dbo"."Adm_School_Y_Student"."ASMAY_Id" = ' || "asmay_id" || ') and ("dbo"."Fee_Student_Status"."MI_Id"=' || "mi_id" || ') ' || "sql2" || ' AND ("dbo"."Fee_Student_Status"."User_Id" = ' || "userid" || ') ' || "sql1" || ' AND ("dbo"."Fee_Master_Terms_FeeHeads"."FMT_Id" IN (' || "fmt_ids" || ')) ' || "amst_sol" || ' and "FMH_Flag" not in (''E'',''F'') group by "dbo"."Fee_Master_Head"."FMH_FeeName" having sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") >0';
+            ELSE
+                "query" := 'SELECT distinct NULL::TEXT AS "StudentName", ("dbo"."Adm_School_M_Class"."ASMCL_ClassName" || '':'' || "dbo"."Adm_School_M_Section"."ASMC_SectionName")::TEXT AS "ASMCL_ClassName", sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount") AS "FSS_OBArrearAmount", sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") AS "FSS_OBExcessAmount", sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") AS "FSS_WaivedAmount", sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount") AS "FSS_AdjustedAmount", sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") AS "FSS_RefundAmount", NULL::TEXT AS "TRMR_RouteName", NULL::TEXT AS "FMH_FeeName", NULL::NUMERIC AS "FSS_TotalToBePaid", NULL::NUMERIC AS "FSS_ToBePaid", NULL::NUMERIC AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Master_Head" INNER JOIN "dbo"."Fee_Master_Terms_FeeHeads" ON "dbo"."Fee_Master_Head"."FMH_Id" = "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" INNER JOIN "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" ON "dbo"."Fee_Student_Status"."AMST_Id" = "dbo"."Adm_M_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" ON "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" = "dbo"."Fee_Student_Status"."FMH_Id" AND "dbo"."Fee_Master_Terms_FeeHeads"."FTI_Id" = "dbo"."Fee_Student_Status"."FTI_Id" WHERE ("dbo"."Adm_School_Y_Student"."ASMAY_Id" = ' || "asmay_id" || ') and ("dbo"."Fee_Student_Status"."MI_Id"=' || "mi_id" || ') ' || "sql2" || ' AND ("dbo"."Fee_Student_Status"."User_Id" = ' || "userid" || ') ' || "sql1" || ' AND ("dbo"."Fee_Master_Terms_FeeHeads"."FMT_Id" IN (' || "fmt_ids" || ')) ' || "amst_sol" || ' and "FMH_Flag" not in (''E'',''F'') group by "ASMCL_ClassName","ASMC_SectionName" having sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") >0';
+            END IF;
+        ELSE
+            "query" := 'SELECT distinct (COALESCE("dbo"."Adm_M_Student"."AMST_FirstName",'''') || '' '' || COALESCE("dbo"."Adm_M_Student"."AMST_MiddleName",'''') || '' '' || COALESCE("dbo"."Adm_M_Student"."AMST_LastName",''''))::TEXT AS "StudentName", ("dbo"."Adm_School_M_Class"."ASMCL_ClassName" || '':'' || "dbo"."Adm_School_M_Section"."ASMC_SectionName")::TEXT AS "ASMCL_ClassName", sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount") AS "FSS_OBArrearAmount", sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") AS "FSS_OBExcessAmount", sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") AS "FSS_WaivedAmount", sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount") AS "FSS_AdjustedAmount", sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") AS "FSS_RefundAmount", NULL::TEXT AS "TRMR_RouteName", NULL::TEXT AS "FMH_FeeName", NULL::NUMERIC AS "FSS_TotalToBePaid", NULL::NUMERIC AS "FSS_ToBePaid", NULL::NUMERIC AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Master_Head" INNER JOIN "dbo"."Fee_Master_Terms_FeeHeads" ON "dbo"."Fee_Master_Head"."FMH_Id" = "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" INNER JOIN "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" ON "dbo"."Fee_Student_Status"."AMST_Id" = "dbo"."Adm_M_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" ON "dbo"."Fee_Master_Terms_FeeHeads"."FMH_Id" = "dbo"."Fee_Student_Status"."FMH_Id" AND "dbo"."Fee_Master_Terms_FeeHeads"."FTI_Id" = "dbo"."Fee_Student_Status"."FTI_Id" inner join "trn"."TR_Student_Route" on "trn"."TR_Student_Route"."AMST_Id"="dbo"."Fee_Student_Status"."AMST_Id" WHERE ("dbo"."Adm_School_Y_Student"."ASMAY_Id" = ' || "asmay_id" || ') and ("dbo"."Fee_Student_Status"."MI_Id"=' || "mi_id" || ') ' || "sql1" || ' AND ("dbo"."Fee_Student_Status"."User_Id" = ' || "userid" || ') AND ("dbo"."Fee_Master_Terms_FeeHeads"."FMT_Id" IN (' || "fmt_ids" || ')) and ("trn"."TR_Student_Route"."TRMR_Id"=' || "trmr_id" || ') ' || "amst_sol" || ' ' || "sql2" || ' and "FMH_Flag" not in (''E'',''F'') group by "ASMCL_ClassName","ASMC_SectionName","AMST_FirstName","AMST_MiddleName","AMST_LastName" having sum("dbo"."Fee_Student_Status"."FSS_OBArrearAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RunningExcessAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_WaivedAmount") >0 or sum("dbo"."Fee_Student_Status"."FSS_AdjustedAmount")>0 or sum("dbo"."Fee_Student_Status"."FSS_RefundAmount") >0';
+        END IF;
+    ELSE
+        IF "details" = 'WO' THEN
+            "query" := 'select NULL::TEXT AS "StudentName", NULL::TEXT AS "ASMCL_ClassName", NULL::NUMERIC AS "FSS_OBArrearAmount", NULL::NUMERIC AS "FSS_OBExcessAmount", sum("FSS_WaivedAmount") AS "FSS_WaivedAmount", NULL::NUMERIC AS "FSS_AdjustedAmount", NULL::NUMERIC AS "FSS_RefundAmount", NULL::TEXT AS "TRMR_RouteName", "FMH_FeeName"::TEXT, sum("FSS_NetAmount") AS "FSS_TotalToBePaid", sum("FSS_ToBePaid") AS "FSS_ToBePaid", sum("FSS_PaidAmount") AS "FSS_PaidAmount", NULL::NUMERIC AS "FMOB_Student_Due", NULL::NUMERIC AS "FMOB_Institution_Due", NULL::TEXT AS "FSWO_Date" FROM "dbo"."Fee_Student_Status" INNER JOIN "dbo"."Adm_M_Student" on "Fee_Student_Status"."amst_id"="adm_M_student"."AMST_Id" INNER JOIN "dbo"."Adm_School_Y_Student" ON "dbo"."Adm_M_Student"."AMST_Id" = "dbo"."Adm_School_Y_Student"."AMST_Id" and "Fee_Student_Status"."ASMAY_Id"="Adm_School_Y_Student"."ASMAY_Id" INNER JOIN "dbo"."Fee_Master_Head" on "Fee_Master_Head"."FMH_Id"="Fee_Student_Status"."FMH_Id" INNER JOIN "dbo"."Adm_School_M_Class" ON "dbo"."Adm_School_Y_Student"."ASMCL_Id" = "dbo"."Adm_School_M_Class"."ASMCL_Id" INNER JOIN "dbo"."Adm_School_M_Section" ON "dbo"."Adm_School_Y_Student"."ASMS_Id" = "dbo"."Adm_School_M_Section"."ASMS_Id" inner join "Fee_Master_Terms_FeeHeads" on "Fee_Master_Terms_FeeHeads"."FMH_Id"="Fee_Student_Status"."FMH_Id" and "Fee_Master_Terms_FeeHeads"."fti_id"="Fee_Student_Status"."FTI_Id" WHERE ("Fee_Student_Status"."MI_Id" = ' || "mi_id" || ') AND ("Fee_Student_Status"."ASMAY_Id" = ' || "asmay_id" || ') and ("Adm_School_Y_Student"."ASMAY_Id"=' || "asmay_id" || ') ' || "sql2" || ' ' || "sql1" || ' and "Fee_Student_Status"."User_Id"=' || "userid" || ' and "FMH_Flag" not in (''E'',''F'') ' || "amst_sol" || ' group by "AMST_FirstName","AMST_MiddleName","AMST_LastName","ASMCL_ClassName","ASMC_SectionName","FMH_FeeName" having sum("FSS_Waive

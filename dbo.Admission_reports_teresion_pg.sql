@@ -1,0 +1,152 @@
+CREATE OR REPLACE FUNCTION "dbo"."Admission_reports_teresion"(
+    "report_name" VARCHAR(50),
+    "MI_Id" BIGINT,
+    "ASMAY_Id" BIGINT,
+    "AMCO_Id" BIGINT,
+    "AMSE_ID" BIGINT,
+    "ACMS_ID" BIGINT,
+    "AMB_Id" BIGINT,
+    "AMCST_ID" BIGINT
+)
+RETURNS TABLE(
+    "Student_Name" TEXT,
+    "coursename" TEXT,
+    "syslabus" TEXT,
+    "coustart" TEXT,
+    "couend" TEXT,
+    "AMCST_Id" BIGINT,
+    "MI_Id" BIGINT,
+    "AMCST_SOL" TEXT,
+    "AMCST_FirstName" TEXT,
+    "AMCST_MiddleName" TEXT,
+    "AMCST_LastName" TEXT,
+    "AMCST_Date" TIMESTAMP,
+    "AMCST_Sex" TEXT,
+    "AMCST_RegistrationNo" TEXT,
+    "AMCST_AdmNo" TEXT,
+    "AMC_Id" BIGINT,
+    "AMCST_FatherName" TEXT,
+    "AMCST_MotherName" TEXT,
+    "AMCST_MotherOccupation" TEXT,
+    "AMCST_FatherOccupation" TEXT,
+    "AMCST_MobileNo" BIGINT,
+    "AMCST_emailId" TEXT,
+    "AMCST_DOB" TIMESTAMP,
+    "AMCST_MotherMobileNo" BIGINT,
+    "AMCST_FatherMobleNo" BIGINT,
+    "AMCST_MotherEmailId" TEXT,
+    "AMCST_FatheremailId" TEXT,
+    "AMCST_BloodGroup" TEXT,
+    "AMCST_PerStreet" TEXT,
+    "AMCST_PerArea" TEXT,
+    "AMCST_PerCity" TEXT,
+    "AMCST_PerState" BIGINT,
+    "AMCST_PerCountry" BIGINT,
+    "AMCST_PerPincode" BIGINT,
+    "AMCST_ConStreet" TEXT,
+    "AMCST_ConArea" TEXT,
+    "AMCST_ConCity" TEXT,
+    "AMCST_ConState" BIGINT,
+    "AMCST_ConCountry" BIGINT,
+    "AMCST_ConPincode" BIGINT,
+    "AMCST_AadharNo" BIGINT,
+    "AMCST_BirthPlace" TEXT,
+    "AMCST_StuBankAccNo" TEXT,
+    "AMCST_StuBankIFSCCode" TEXT,
+    "AMCST_StuCasteCertiNo" TEXT,
+    "AMCST_ActiveFlag" BOOLEAN,
+    "AMCST_CreatedDate" TIMESTAMP,
+    "AMCST_UpdatedDate" TIMESTAMP,
+    "AMCST_Nationality" BIGINT,
+    "AMCST_BPLCardFlag" BOOLEAN,
+    "AMCST_BPLCardNo" TEXT,
+    "AMCST_HostelReqdFlag" BOOLEAN,
+    "AMCST_TransportReqdFlag" BOOLEAN,
+    "AMCST_GymReqdFlag" BOOLEAN,
+    "AMCST_ECSFlag" BOOLEAN,
+    "AMCST_PaymentFlag" BIGINT,
+    "AMCST_AmountPaid" DECIMAL,
+    "AMCST_FinalpaymentFlag" BOOLEAN,
+    "AMCST_StudentPhoto" TEXT,
+    "AMCST_StudentSign" TEXT,
+    "AMCST_FatherPhoto" TEXT,
+    "AMCST_FatherSign" TEXT,
+    "AMCST_MotherPhoto" TEXT,
+    "AMCST_MotherSign" TEXT,
+    "AMCST_BirthCertificateNo" TEXT,
+    "AMCST_CoutryCode" BIGINT,
+    "AMCST_TPinCode" BIGINT,
+    "AMCST_Village" TEXT,
+    "AMCST_Taluk" TEXT,
+    "AMCST_District" TEXT,
+    "AMCST_Urban_Rural" TEXT,
+    "AMCST_Divyangjan" TEXT,
+    "AMCST_PerDistrict" TEXT
+) AS $$
+BEGIN
+
+    IF "report_name" = 'conductcer' THEN
+        RETURN QUERY
+        SELECT 
+            (COALESCE("AMCST_FirstName", ' ') || COALESCE("AMCST_MiddleName", '') || COALESCE("AMCST_LastName", ''))::TEXT AS "Student_Name",
+            'BCOM'::TEXT AS "coursename",
+            NULL::TEXT AS "syslabus",
+            '2018'::TEXT AS "coustart",
+            '2020'::TEXT AS "couend",
+            NULL::BIGINT, NULL::BIGINT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TIMESTAMP,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+            NULL::BIGINT, NULL::TEXT, NULL::TIMESTAMP, NULL::BIGINT, NULL::BIGINT, NULL::TEXT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BOOLEAN, NULL::TIMESTAMP, NULL::TIMESTAMP,
+            NULL::BIGINT, NULL::BOOLEAN, NULL::TEXT, NULL::BOOLEAN, NULL::BOOLEAN, NULL::BOOLEAN,
+            NULL::BOOLEAN, NULL::BIGINT, NULL::DECIMAL, NULL::BOOLEAN, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT
+        FROM "clg"."Adm_Master_College_Student";
+
+    ELSIF "report_name" = 'coursecer' THEN
+        RETURN QUERY
+        SELECT 
+            (COALESCE("AMCST_FirstName", ' ') || COALESCE("AMCST_MiddleName", '') || COALESCE("AMCST_LastName", ''))::TEXT AS "Student_Name",
+            'BCOM'::TEXT AS "coursename",
+            'University'::TEXT AS "syslabus",
+            '2018'::TEXT AS "coustart",
+            '2020'::TEXT AS "couend",
+            NULL::BIGINT, NULL::BIGINT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TIMESTAMP,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+            NULL::BIGINT, NULL::TEXT, NULL::TIMESTAMP, NULL::BIGINT, NULL::BIGINT, NULL::TEXT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT, NULL::BIGINT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BOOLEAN, NULL::TIMESTAMP, NULL::TIMESTAMP,
+            NULL::BIGINT, NULL::BOOLEAN, NULL::TEXT, NULL::BOOLEAN, NULL::BOOLEAN, NULL::BOOLEAN,
+            NULL::BOOLEAN, NULL::BIGINT, NULL::DECIMAL, NULL::BOOLEAN, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::BIGINT, NULL::BIGINT, NULL::TEXT,
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT
+        FROM "clg"."Adm_Master_College_Student";
+
+    ELSIF "report_name" = 'tetransfer' THEN
+        RETURN QUERY
+        SELECT 
+            NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+            "AMCST_Id", "MI_Id", "AMCST_SOL", "AMCST_FirstName", "AMCST_MiddleName", "AMCST_LastName",
+            "AMCST_Date", "AMCST_Sex", "AMCST_RegistrationNo", "AMCST_AdmNo", "AMC_Id",
+            "AMCST_FatherName", "AMCST_MotherName", "AMCST_MotherOccupation", "AMCST_FatherOccupation",
+            "AMCST_MobileNo", "AMCST_emailId", "AMCST_DOB", "AMCST_MotherMobileNo", "AMCST_FatherMobleNo",
+            "AMCST_MotherEmailId", "AMCST_FatheremailId", "AMCST_BloodGroup", "AMCST_PerStreet",
+            "AMCST_PerArea", "AMCST_PerCity", "AMCST_PerState", "AMCST_PerCountry", "AMCST_PerPincode",
+            "AMCST_ConStreet", "AMCST_ConArea", "AMCST_ConCity", "AMCST_ConState", "AMCST_ConCountry",
+            "AMCST_ConPincode", "AMCST_AadharNo", "AMCST_BirthPlace", "AMCST_StuBankAccNo",
+            "AMCST_StuBankIFSCCode", "AMCST_StuCasteCertiNo", "AMCST_ActiveFlag", "AMCST_CreatedDate",
+            "AMCST_UpdatedDate", "AMCST_Nationality", "AMCST_BPLCardFlag", "AMCST_BPLCardNo",
+            "AMCST_HostelReqdFlag", "AMCST_TransportReqdFlag", "AMCST_GymReqdFlag", "AMCST_ECSFlag",
+            "AMCST_PaymentFlag", "AMCST_AmountPaid", "AMCST_FinalpaymentFlag", "AMCST_StudentPhoto",
+            "AMCST_StudentSign", "AMCST_FatherPhoto", "AMCST_FatherSign", "AMCST_MotherPhoto",
+            "AMCST_MotherSign", "AMCST_BirthCertificateNo", "AMCST_CoutryCode", "AMCST_TPinCode",
+            "AMCST_Village", "AMCST_Taluk", "AMCST_District", "AMCST_Urban_Rural", "AMCST_Divyangjan",
+            "AMCST_PerDistrict"
+        FROM "clg"."Adm_Master_College_Student";
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;

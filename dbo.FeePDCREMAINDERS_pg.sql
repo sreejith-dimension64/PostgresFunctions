@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION "FeePDCREMAINDERS" (p_FPDC_Id bigint)
+RETURNS TABLE (
+    "CHEQUENO" VARCHAR,
+    "CHEQUEDATE" TIMESTAMP,
+    "AMOUNT" NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        "FPDC_ChequeNo" AS "CHEQUENO",
+        "FPDC_ChequeDate" AS "CHEQUEDATE",
+        "FCSPDC_Amount" AS "AMOUNT"
+    FROM "Fee_PDC"
+    WHERE "FPDC_Id" = p_FPDC_Id;
+END;
+$$;

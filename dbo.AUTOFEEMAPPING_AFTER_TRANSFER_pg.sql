@@ -1,0 +1,21 @@
+CREATE OR REPLACE FUNCTION "dbo"."AUTOFEEMAPPING_AFTER_TRANSFER"(
+    "@AMST_ID" BIGINT,
+    "@PASR_ID" BIGINT,
+    "@MI_ID" BIGINT,
+    "@ASMAY_ID" BIGINT,
+    "@HRME_ID" BIGINT,
+    "@FLAG" TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM "dbo"."SAVE_CONCESSION_FOR_SIBLINGS_PREADMISSION"(
+        "@MI_ID",
+        "@ASMAY_ID",
+        "@AMST_ID",
+        "@HRME_ID",
+        "@FLAG"
+    );
+END;
+$$;

@@ -1,0 +1,9 @@
+CREATE OR REPLACE FUNCTION "dbo"."GET_MEETING_NOTIFICATION_INTERVAL"(p_miid bigint)
+RETURNS TABLE("Interval" integer)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 60000 AS "Interval";
+END;
+$$;
